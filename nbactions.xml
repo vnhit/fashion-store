@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+    <action>
+        <actionName>run</actionName>
+        <packagings>
+            <packaging>jar</packaging>
+        </packagings>
+        <goals>
+            <goal>clean</goal>
+            <goal>compile</goal>
+            <goal>org.openjfx:javafx-maven-plugin:0.0.8:run</goal>
+        </goals>
+        <properties>
+            <runfx.args>-Dfile.encoding=UTF-8</runfx.args>
+        </properties>
+    </action>
+    <action>
+        <actionName>debug</actionName>
+        <packagings>
+            <packaging>jar</packaging>
+        </packagings>
+        <goals>
+            <goal>clean</goal>
+            <goal>compile</goal>
+            <goal>org.openjfx:javafx-maven-plugin:0.0.8:run</goal>
+        </goals>
+        <properties>
+            <runfx.args>-Dfile.encoding=UTF-8 -agentlib:jdwp=transport=dt_socket,server=n,address=${jpda.address}</runfx.args>
+            <jpda.listen>true</jpda.listen>
+        </properties>
+    </action>
+    <action>
+        <actionName>profile</actionName>
+        <packagings>
+            <packaging>jar</packaging>
+        </packagings>
+        <goals>
+            <goal>clean</goal>
+            <goal>compile</goal>
+        </goals>
+    </action>
+</actions>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
