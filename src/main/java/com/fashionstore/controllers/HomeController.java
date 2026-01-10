@@ -12,7 +12,10 @@ import com.fashionstore.services.ProductService;
 import com.fashionstore.services.CartService;
 import com.fashionstore.services.FavoritesService;
 import com.fashionstore.dao.UserDAO;
+import com.fashionstore.dao.NotificationDAO;
 import com.fashionstore.models.Product;
+import com.fashionstore.models.Notification;
+import java.time.format.DateTimeFormatter;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
@@ -22,6 +25,7 @@ public class HomeController {
     private ProductService productService = new ProductService();
     private CartService cartService = new CartService();
     private FavoritesService favoritesService = new FavoritesService();
+    private NotificationDAO notificationDAO = new NotificationDAO();
     private int currentUserId = UserDAO.getCurrentUserId();
     // Dùng cùng một ký tự tim rỗng cho cả 2 trạng thái để tránh lỗi font ở ký tự tim đặc
     private static final String HEART_OUTLINE = "\u2661"; // ♡
@@ -115,12 +119,49 @@ public class HomeController {
         HBox iconBox = new HBox(15);
         iconBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
         
-        Button notificationBtn = new Button("🔔");
+        StackPane notificationContainer = new StackPane();
+        notificationContainer.setPrefWidth(40);
+        notificationContainer.setPrefHeight(40);
+        notificationContainer.setMaxWidth(40);
+        notificationContainer.setMaxHeight(40);
+        Button notificationBtn = new Button();
         notificationBtn.getStyleClass().add("icon-button");
+        notificationBtn.setText("");
+        Text notificationIcon = new Text("🔔");
+        notificationIcon.setStyle("-fx-font-size: 22px; -fx-font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', 'Apple Color Emoji', 'Arial Unicode MS', 'Arial';");
+        notificationBtn.setGraphic(notificationIcon);
+        notificationBtn.setPrefWidth(40);
+        notificationBtn.setPrefHeight(40);
+        
+        // Hiển thị badge số thông báo chưa đọc
+        int unreadCount = notificationDAO.getUnreadCount(currentUserId);
+        if (unreadCount > 0) {
+            Label notificationBadge = new Label(String.valueOf(unreadCount));
+            notificationBadge.getStyleClass().add("cart-badge");
+            StackPane.setAlignment(notificationBadge, javafx.geometry.Pos.TOP_RIGHT);
+            StackPane.setMargin(notificationBadge, new javafx.geometry.Insets(1, 10, 0, 0));
+            notificationContainer.getChildren().addAll(notificationBtn, notificationBadge);
+        } else {
+            notificationContainer.getChildren().add(notificationBtn);
+        }
+        
+        notificationBtn.setOnAction(e -> {
+            showNotificationsDialog(stage);
+        });
         
         StackPane cartContainer = new StackPane();
-        Button cartBtn = new Button("🛍️");
+        cartContainer.setPrefWidth(40);
+        cartContainer.setPrefHeight(40);
+        cartContainer.setMaxWidth(40);
+        cartContainer.setMaxHeight(40);
+        Button cartBtn = new Button();
         cartBtn.getStyleClass().add("icon-button");
+        cartBtn.setText("");
+        Text cartIcon = new Text("🛍️");
+        cartIcon.setStyle("-fx-font-size: 22px; -fx-font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', 'Apple Color Emoji', 'Arial Unicode MS', 'Arial';");
+        cartBtn.setGraphic(cartIcon);
+        cartBtn.setPrefWidth(40);
+        cartBtn.setPrefHeight(40);
         cartBtn.setOnAction(e -> {
             CartController cartController = new CartController();
             cartController.show(stage);
@@ -132,20 +173,26 @@ public class HomeController {
             Label cartBadge = new Label(String.valueOf(cartCount));
             cartBadge.getStyleClass().add("cart-badge");
             StackPane.setAlignment(cartBadge, javafx.geometry.Pos.TOP_RIGHT);
-            StackPane.setMargin(cartBadge, new javafx.geometry.Insets(-5, 40, 0, 0));
+            StackPane.setMargin(cartBadge, new javafx.geometry.Insets(1, 28, 0, 0));
             cartContainer.getChildren().addAll(cartBtn, cartBadge);
         } else {
             cartContainer.getChildren().add(cartBtn);
         }
         
         // User icon button
-        Button userBtn = new Button("👤");
+        Button userBtn = new Button();
         userBtn.getStyleClass().add("icon-button");
+        userBtn.setText("");
+        Text userIcon = new Text("👤");
+        userIcon.setStyle("-fx-font-size: 22px; -fx-font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', 'Apple Color Emoji', 'Arial Unicode MS', 'Arial';");
+        userBtn.setGraphic(userIcon);
+        userBtn.setPrefWidth(40);
+        userBtn.setPrefHeight(40);
         userBtn.setOnAction(e -> {
             UserInfoDialog.show(stage);
         });
         
-        iconBox.getChildren().addAll(notificationBtn, cartContainer, userBtn);
+        iconBox.getChildren().addAll(notificationContainer, cartContainer, userBtn);
         
         header.getChildren().addAll(logoBox, searchBox, iconBox);
         return header;
@@ -543,5 +590,111 @@ public class HomeController {
     private String formatPrice(BigDecimal price) {
         if (price == null) return "0₫";
         return String.format("%,d₫", price.intValue());
+    }
+    
+    /**
+     * Hiển thị dialog thông báo cho user
+     */
+    private void showNotificationsDialog(Stage owner) {
+        javafx.stage.Stage dialog = new javafx.stage.Stage();
+        dialog.initOwner(owner);
+        dialog.initModality(javafx.stage.Modality.WINDOW_MODAL);
+        dialog.setTitle("Thông báo");
+        
+        VBox root = new VBox(15);
+        root.setPadding(new javafx.geometry.Insets(20));
+        root.setPrefWidth(500);
+        root.setPrefHeight(600);
+        
+        HBox header = new HBox();
+        Label title = new Label("🔔 Thông báo");
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        HBox.setHgrow(title, Priority.ALWAYS);
+        header.getChildren().add(title);
+        
+        ScrollPane scrollPane = new ScrollPane();
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+        
+        VBox notificationsList = new VBox(10);
+        notificationsList.setPadding(new javafx.geometry.Insets(10));
+        
+        List<Notification> notifications = notificationDAO.getNotificationsByUser(currentUserId);
+        
+        if (notifications.isEmpty()) {
+            Label noNotifications = new Label("Không có thông báo nào");
+            noNotifications.setStyle("-fx-font-size: 14px; -fx-text-fill: #666;");
+            noNotifications.setAlignment(javafx.geometry.Pos.CENTER);
+            notificationsList.getChildren().add(noNotifications);
+        } else {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            for (Notification notification : notifications) {
+                VBox notificationItem = new VBox(5);
+                notificationItem.setPadding(new javafx.geometry.Insets(10));
+                notificationItem.setStyle("-fx-background-color: " + 
+                    (notification.isRead() ? "#f5f5f5" : "#e3f2fd") + "; " +
+                    "-fx-background-radius: 8; " +
+                    "-fx-border-color: #ddd; " +
+                    "-fx-border-radius: 8;");
+                
+                HBox notificationHeader = new HBox(10);
+                Text icon = new Text();
+                if ("ORDER_SHIPPED".equals(notification.getType())) {
+                    icon.setText("🚚");
+                } else if ("ORDER_DELIVERED".equals(notification.getType())) {
+                    icon.setText("✅");
+                } else {
+                    icon.setText("📦");
+                }
+                icon.setStyle("-fx-font-size: 20px; -fx-font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', 'Apple Color Emoji', 'Arial Unicode MS', 'Arial';");
+                
+                VBox notificationContent = new VBox(3);
+                Label messageLabel = new Label(notification.getMessage());
+                messageLabel.setWrapText(true);
+                messageLabel.setStyle("-fx-font-size: 14px; " +
+                    (notification.isRead() ? "-fx-text-fill: #666;" : "-fx-font-weight: bold;"));
+                
+                Label timeLabel = new Label(notification.getCreatedAt() != null ? 
+                    notification.getCreatedAt().format(formatter) : "");
+                timeLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #999;");
+                
+                notificationContent.getChildren().addAll(messageLabel, timeLabel);
+                HBox.setHgrow(notificationContent, Priority.ALWAYS);
+                
+                notificationHeader.getChildren().addAll(icon, notificationContent);
+                
+                notificationItem.getChildren().add(notificationHeader);
+                notificationsList.getChildren().add(notificationItem);
+                
+                // Đánh dấu đã đọc khi click vào thông báo
+                notificationItem.setOnMouseClicked(e -> {
+                    if (!notification.isRead()) {
+                        notificationDAO.markAsRead(notification.getId());
+                        notification.setRead(true);
+                        // Refresh dialog
+                        showNotificationsDialog(owner);
+                    }
+                });
+            }
+        }
+        
+        scrollPane.setContent(notificationsList);
+        
+        Button closeBtn = new Button("Đóng");
+        closeBtn.getStyleClass().add("admin-btn");
+        closeBtn.setPrefWidth(Double.MAX_VALUE);
+        closeBtn.setOnAction(e -> dialog.close());
+        
+        root.getChildren().addAll(header, scrollPane, closeBtn);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+        
+        Scene scene = new Scene(root);
+        try {
+            scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
+        } catch (Exception e) {
+            // Ignore
+        }
+        dialog.setScene(scene);
+        dialog.show();
     }
 }

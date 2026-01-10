@@ -7,6 +7,7 @@ import com.fashionstore.dao.UserDAO;
 import com.fashionstore.dao.VoucherDAO;
 import com.fashionstore.dao.OrderDAO;
 import com.fashionstore.dao.CategoryDAO;
+import com.fashionstore.dao.NotificationDAO;
 import com.fashionstore.models.Product;
 import com.fashionstore.models.Review;
 import com.fashionstore.models.User;
@@ -14,6 +15,7 @@ import com.fashionstore.models.Voucher;
 import com.fashionstore.models.Order;
 import com.fashionstore.models.MonthlyRevenue;
 import com.fashionstore.models.Category;
+import com.fashionstore.models.Notification;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -71,6 +73,7 @@ public class AdminController {
     private final CartDAO cartDAO = new CartDAO();
     private final OrderDAO orderDAO = new OrderDAO();
     private final CategoryDAO categoryDAO = new CategoryDAO();
+    private final NotificationDAO notificationDAO = new NotificationDAO();
     
     public void show(Stage stage) {
         BorderPane root = new BorderPane();
@@ -83,7 +86,7 @@ public class AdminController {
         topHeader.setPadding(new Insets(15, 20, 15, 20));
         topHeader.getStyleClass().add("admin-top-header");
         
-        Label logo = new Label("TECHSHOP ADMIN");
+        Label logo = new Label("FashionStore ADMIN");
         logo.getStyleClass().add("admin-logo");
         
         Region spacer = new Region();
@@ -1828,6 +1831,7 @@ public class AdminController {
         approveBtn.setOnAction(e -> {
             Order selected = table.getSelectionModel().getSelectedItem();
             if (selected != null) {
+                String oldStatus = selected.getStatus();
                 String status = statusCombo.getValue();
                 // Map hiển thị sang status trong DB
                 switch (status) {
@@ -1836,9 +1840,17 @@ public class AdminController {
                         break;
                     case "Đang giao":
                         orderDAO.updateOrderStatus(selected.getId(), "Đang giao");
+                        // Tạo thông báo khi đơn hàng đã được vận chuyển (chỉ khi status thay đổi)
+                        if (!"Đang giao".equals(oldStatus)) {
+                            createOrderShippedNotification(selected);
+                        }
                         break;
                     case "Hoàn thành":
                         orderDAO.updateOrderStatus(selected.getId(), "Hoàn thành");
+                        // Tạo thông báo khi đơn hàng giao thành công (chỉ khi status thay đổi)
+                        if (!"Hoàn thành".equals(oldStatus)) {
+                            createOrderDeliveredNotification(selected);
+                        }
                         break;
                 }
                 refreshOrders(table);
@@ -1891,6 +1903,32 @@ public class AdminController {
         str = str.replaceAll("[ỲÝỴỶỸ]", "Y");
         str = str.replaceAll("[Đ]", "D");
         return str;
+    }
+    
+    /**
+     * Tạo thông báo khi đơn hàng đã được vận chuyển
+     */
+    private void createOrderShippedNotification(Order order) {
+        Notification notification = new Notification(
+            order.getUserId(),
+            order.getId(),
+            "Đơn hàng #" + order.getId() + " đã được vận chuyển. Vui lòng chuẩn bị nhận hàng!",
+            "ORDER_SHIPPED"
+        );
+        notificationDAO.createNotification(notification);
+    }
+    
+    /**
+     * Tạo thông báo khi đơn hàng giao thành công
+     */
+    private void createOrderDeliveredNotification(Order order) {
+        Notification notification = new Notification(
+            order.getUserId(),
+            order.getId(),
+            "Đơn hàng #" + order.getId() + " đã được giao thành công. Cảm ơn bạn đã mua hàng!",
+            "ORDER_DELIVERED"
+        );
+        notificationDAO.createNotification(notification);
     }
 }
 
