@@ -120,9 +120,7 @@ Shop/
 
 ## Phát triển tiếp
 
-- Thêm chức năng đăng nhập/đăng ký
+
 - Tích hợp thanh toán
-- Quản lý đơn hàng
-- Upload hình ảnh sản phẩm
-- Tìm kiếm sản phẩm
+
 
